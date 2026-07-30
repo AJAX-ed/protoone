@@ -1,6 +1,8 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
+const { getUserByEmail, createUser } = require("../db");
 
 const router = express.Router();
 
@@ -10,10 +12,6 @@ const isProduction = process.env.NODE_ENV === "production";
 if (!JWT_SECRET) {
   console.warn("Warning: JWT_SECRET is not set. Set it in your environment before deploying.");
 }
-
-// Basic in-memory user store placeholder.
-// Replace with a real database (SQLite/Postgres) before production use.
-const users = new Map();
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -44,13 +42,14 @@ router.post("/register", authLimiter, async (req, res) => {
   if (!email || !password) {
     return res.status(400).send("Email and password are required");
   }
-  if (users.has(email)) {
+
+  const existing = getUserByEmail(email);
+  if (existing) {
     return res.status(409).send("User already exists");
   }
 
-  const bcrypt = require("bcryptjs");
   const passwordHash = await bcrypt.hash(password, 12);
-  users.set(email, { email, passwordHash });
+  createUser(email, passwordHash);
 
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1d" });
   setAuthCookie(res, token);
@@ -59,13 +58,12 @@ router.post("/register", authLimiter, async (req, res) => {
 
 router.post("/login", authLimiter, async (req, res) => {
   const { email, password } = req.body;
-  const user = users.get(email);
+  const user = getUserByEmail(email);
   if (!user) {
     return res.status(401).send("Invalid credentials");
   }
 
-  const bcrypt = require("bcryptjs");
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     return res.status(401).send("Invalid credentials");
   }
