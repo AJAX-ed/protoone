@@ -10,6 +10,7 @@ Express-based server-rendered (EJS) frontend with cookie-based JWT authenticatio
 - Helmet security headers (CSP, HSTS in production)
 - Global and auth-specific rate limiting
 - Password hashing with bcrypt
+- Persistent user storage with SQLite (better-sqlite3)
 
 ## Setup
 
@@ -38,20 +39,30 @@ Express-based server-rendered (EJS) frontend with cookie-based JWT authenticatio
 ## Project Structure
 
     frontend/
+    ├── data/             SQLite database file (gitignored, auto-created)
     ├── public/css/       Static stylesheets
     └── src/
         ├── server.js     App entry point, middleware setup
+        ├── db.js         SQLite connection and user queries
         ├── routes/       Route handlers (auth, dashboard)
         └── views/        EJS templates
 
+## Environment Variables
+
+- PORT - server port (default 3000)
+- NODE_ENV - development or production
+- JWT_SECRET - required, used to sign auth tokens
+- DATABASE_PATH - optional, overrides default SQLite file location (data/app.db)
+
 ## Notes
 
-- The current user store in `src/routes/auth.js` is an in-memory placeholder and resets on every server restart. Replace it with a persistent database before any real deployment.
+- User accounts are now persisted in a local SQLite database at `data/app.db` (auto-created on first run). The database file itself is gitignored.
 - Never commit a real `.env` file. Only `.env.example` should be tracked in version control.
 - The `/health` endpoint can be used for uptime checks.
 
 ## Roadmap
 
-- [ ] Persistent database for users (SQLite/Postgres)
+- [x] Persistent database for users (SQLite)
 - [ ] Automated tests (Jest/Supertest) for auth flow
 - [ ] Study module content and dashboard features
+- [ ] Migrate to a networked database (Postgres) if scaling beyond a single instance
